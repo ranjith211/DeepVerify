@@ -139,7 +139,7 @@ function App() {
 
       // Step 2: Trigger verification
       await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay
-      const verifyResponse = await triggerVerification(ingestResponse.verification_id);
+      await triggerVerification(ingestResponse.verification_id);
 
       // Step 3: Get status
       const statusResponse = await getVerificationStatus(ingestResponse.verification_id);

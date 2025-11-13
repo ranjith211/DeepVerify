@@ -1,27 +1,43 @@
-from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017/")
-MONGODB_DB = os.getenv("MONGODB_DB", "deepverify_logs")
+# Mock MongoDB for prototype (no actual MongoDB required)
+class MockCollection:
+    """Mock MongoDB collection for prototype"""
+    def __init__(self):
+        self.data = []
+    
+    def insert_one(self, document):
+        """Mock insert operation"""
+        document['_id'] = len(self.data) + 1
+        self.data.append(document)
+        return document
+    
+    def find_one(self, query):
+        """Mock find operation"""
+        for doc in self.data:
+            if query.get('verification_id') == doc.get('verification_id'):
+                return doc
+        return None
 
 class MongoDB:
-    client = None
-    db = None
+    """Mock MongoDB client for prototype"""
+    collections = {}
 
     @classmethod
     def connect(cls):
-        if cls.client is None:
-            cls.client = MongoClient(MONGODB_URL)
-            cls.db = cls.client[MONGODB_DB]
-        return cls.db
+        """Mock connection"""
+        return cls
 
     @classmethod
     def get_collection(cls, collection_name):
-        db = cls.connect()
-        return db[collection_name]
+        """Get or create mock collection"""
+        if collection_name not in cls.collections:
+            cls.collections[collection_name] = MockCollection()
+        return cls.collections[collection_name]
 
 # Collections
 def get_ai_logs():

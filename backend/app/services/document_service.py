@@ -1,7 +1,5 @@
 import random
 from typing import Tuple, Dict
-from PIL import Image
-import io
 
 class DocumentService:
     """Mock service for document forgery detection"""
