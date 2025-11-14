@@ -50,18 +50,59 @@ async def verify(
         doc_valid, doc_confidence, doc_analysis = DocumentService.analyze_document(doc_path)
         verification.document_status = "passed" if doc_valid else "failed"
         
-        # 2. Liveness Check (mock challenge for now)
+        # 2. Extract and verify data from document
+        extracted_data = DocumentService.extract_data(doc_path, full_name)
+        
+        # Check if extracted name matches provided name (case-insensitive comparison)
+        name_match = False
+        name_match_confidence = 0.0
+        
+        if extracted_data.get("full_name") and full_name:
+            extracted_name_clean = extracted_data["full_name"].lower().strip()
+            provided_name_clean = full_name.lower().strip()
+            
+            # Simple name matching (in production, use fuzzy matching)
+            if extracted_name_clean == provided_name_clean:
+                name_match = True
+                name_match_confidence = 0.95
+            elif extracted_name_clean in provided_name_clean or provided_name_clean in extracted_name_clean:
+                name_match = True
+                name_match_confidence = 0.75
+            else:
+                name_match = False
+                name_match_confidence = 0.20
+                # If name doesn't match, mark document as failed
+                doc_valid = False
+                doc_analysis["name_verification"] = {
+                    "matched": False,
+                    "extracted_name": extracted_data["full_name"],
+                    "provided_name": full_name,
+                    "details": "Name on document does not match provided information"
+                }
+                verification.document_status = "failed"
+        else:
+            # No name extracted - document invalid
+            name_match = False
+            name_match_confidence = 0.0
+            doc_valid = False
+            verification.document_status = "failed"
+            doc_analysis["name_verification"] = {
+                "matched": False,
+                "details": "Unable to extract name from document"
+            }
+        
+        # 3. Liveness Check (mock challenge for now)
         mock_challenge = {"expected_phrase": "blue cat", "expected_gesture": "hold up three fingers"}
         liveness_valid, liveness_confidence, liveness_analysis = LivenessService.validate_liveness(
             video_path, mock_challenge
         )
         verification.liveness_status = "passed" if liveness_valid else "failed"
         
-        # 3. Compliance Check
+        # 4. Compliance Check
         compliance_result = ComplianceService.perform_compliance_check(full_name, dob)
         verification.compliance_status = "passed" if compliance_result["passed"] else "failed"
         
-        # 4. Calculate Overall Risk Score
+        # 5. Calculate Overall Risk Score (including name match)
         overall_risk = XAIService.calculate_risk_score(
             doc_valid,
             doc_confidence,
@@ -69,6 +110,10 @@ async def verify(
             liveness_confidence,
             compliance_result["risk_score"]
         )
+        
+        # Increase risk if name doesn't match
+        if not name_match:
+            overall_risk = min(overall_risk + 0.30, 1.0)  # Add 30% risk for name mismatch
         
         verification.risk_score = overall_risk
         
@@ -84,13 +129,19 @@ async def verify(
             verification.risk_level = "high"
             verification.status = "rejected"
         
-        # 5. Generate Explanation
+        # 6. Generate Explanation
         explanation = XAIService.generate_explanation(
             doc_analysis,
             liveness_analysis,
             compliance_result,
             overall_risk
         )
+        
+        # Add name verification to explanation if it failed
+        if not name_match:
+            explanation = f"⚠ NAME MISMATCH DETECTED\n" + \
+                         f"Document name does not match provided information (Confidence: {name_match_confidence:.1%})\n\n" + \
+                         explanation
         verification.explanation = explanation
         verification.completed_at = datetime.utcnow()
         
