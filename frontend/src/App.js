@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import Webcam from 'react-webcam';
 import './App.css';
+import FaceDetectionWebcam from './components/FaceDetectionWebcam';
 import {
   ingestVerification,
   getLivenessChallenge,
@@ -249,16 +249,13 @@ function App() {
           <h3>Your Challenge:</h3>
           <div className="challenge-text">{challenge.challenge_text}</div>
           <p>Please perform this action clearly on camera</p>
+          <p style={{ color: '#ff9800', fontWeight: 'bold' }}>
+            ⚠️ Make sure only YOUR face is visible. Multiple faces will be highlighted in RED.
+          </p>
         </div>
       )}
       <div className="webcam-container">
-        <Webcam
-          ref={webcamRef}
-          audio={true}
-          muted={true}
-          width={640}
-          height={480}
-        />
+        <FaceDetectionWebcam ref={webcamRef} />
       </div>
       <div style={{ textAlign: 'center', marginTop: '20px' }}>
         {!recording && !videoBlob && (
