@@ -20,14 +20,18 @@ class LivenessService:
         "wave your hand"
     ]
     
+    # Thumbs up is always required for verification
+    REQUIRED_GESTURE = "make a thumbs up"
+    
     @staticmethod
     def generate_challenge(language: str = "english") -> LivenessChallenge:
-        """Generate a random liveness challenge"""
+        """Generate a random liveness challenge - always includes thumbs up gesture"""
         if language not in LivenessService.PHRASES:
             language = "english"
         
         phrase = random.choice(LivenessService.PHRASES[language])
-        gesture = random.choice(LivenessService.GESTURES)
+        # Always use thumbs up as the gesture for consistency with frontend detection
+        gesture = LivenessService.REQUIRED_GESTURE
         
         challenge_text = f"Say '{phrase}' and {gesture}"
         
