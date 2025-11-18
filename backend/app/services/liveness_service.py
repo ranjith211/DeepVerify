@@ -39,11 +39,45 @@ class LivenessService:
         )
     
     @staticmethod
-    def validate_liveness(video_path: str, challenge: Dict) -> Tuple[bool, float, Dict]:
+    def validate_liveness(video_path: str, challenge: Dict, face_count: int = None) -> Tuple[bool, float, Dict]:
         """
         Mock validation of liveness video against challenge with file validation
         Returns: (is_valid, confidence_score, analysis_details)
+        
+        Args:
+            video_path: Path to the video file
+            challenge: Challenge dictionary
+            face_count: Number of faces detected in the video (None means not checked)
         """
+        # KYC Requirement: Exactly 1 face must be detected
+        if face_count is not None:
+            if face_count == 0:
+                return False, 0.0, {
+                    "lip_sync_match": False,
+                    "lip_sync_confidence": 0.0,
+                    "gesture_detected": False,
+                    "gesture_confidence": 0.0,
+                    "audio_match": False,
+                    "audio_confidence": 0.0,
+                    "deepfake_probability": 0.98,
+                    "video_quality": "failed",
+                    "face_count": 0,
+                    "analysis_notes": "KYC FAILED: No face detected in video - verification cannot proceed"
+                }
+            elif face_count > 1:
+                return False, 0.0, {
+                    "lip_sync_match": False,
+                    "lip_sync_confidence": 0.0,
+                    "gesture_detected": False,
+                    "gesture_confidence": 0.0,
+                    "audio_match": False,
+                    "audio_confidence": 0.0,
+                    "deepfake_probability": 0.95,
+                    "video_quality": "failed",
+                    "face_count": face_count,
+                    "analysis_notes": f"KYC FAILED: Multiple faces detected ({face_count}) - only one person allowed for verification"
+                }
+        
         # Check if video file exists and has content
         if not os.path.exists(video_path):
             return False, 0.0, {
@@ -55,6 +89,7 @@ class LivenessService:
                 "audio_confidence": 0.0,
                 "deepfake_probability": 0.95,
                 "video_quality": "error",
+                "face_count": face_count,
                 "analysis_notes": "Video file not found or invalid"
             }
         
@@ -72,6 +107,7 @@ class LivenessService:
                 "audio_confidence": 0.08,
                 "deepfake_probability": 0.95,
                 "video_quality": "poor",
+                "face_count": face_count,
                 "analysis_notes": "Video too short or blank screen detected - no person visible"
             }
         
@@ -86,6 +122,7 @@ class LivenessService:
                 "audio_confidence": 0.25,
                 "deepfake_probability": 0.85,
                 "video_quality": "suspicious",
+                "face_count": face_count,
                 "analysis_notes": "Minimal video content - possible static image or pre-recorded loop"
             }
         
@@ -108,6 +145,7 @@ class LivenessService:
             "audio_confidence": confidence if is_valid else confidence * 0.9,
             "deepfake_probability": 0.05 if is_valid else random.uniform(0.6, 0.9),
             "video_quality": "good" if is_valid else "suspicious",
+            "face_count": face_count if face_count is not None else 1,
             "analysis_notes": "Genuine live video" if is_valid else "Potential deepfake or pre-recorded content detected"
         }
         

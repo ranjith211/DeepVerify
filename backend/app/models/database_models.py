@@ -25,6 +25,7 @@ class VerificationLog(Base):
     document_status = Column(String)
     liveness_status = Column(String)
     compliance_status = Column(String)
+    face_count = Column(Integer, nullable=True)  # Number of faces in liveness video (must be 1)
     requires_human_review = Column(Boolean, default=False)
     explanation = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)

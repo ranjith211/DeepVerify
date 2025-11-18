@@ -94,7 +94,7 @@ async def verify(
         # 3. Liveness Check (mock challenge for now)
         mock_challenge = {"expected_phrase": "blue cat", "expected_gesture": "hold up three fingers"}
         liveness_valid, liveness_confidence, liveness_analysis = LivenessService.validate_liveness(
-            video_path, mock_challenge
+            video_path, mock_challenge, verification.face_count
         )
         verification.liveness_status = "passed" if liveness_valid else "failed"
         

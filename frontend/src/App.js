@@ -19,6 +19,7 @@ function App() {
   });
   const [documentFile, setDocumentFile] = useState(null);
   const [videoBlob, setVideoBlob] = useState(null);
+  const [faceCountDuringRecording, setFaceCountDuringRecording] = useState(null);
   const [challenge, setChallenge] = useState(null);
   const [language, setLanguage] = useState('english');
   const [verificationId, setVerificationId] = useState(null);
@@ -86,8 +87,16 @@ function App() {
     setStep(step - 1);
   };
 
+  const handleFaceCountChange = (count) => {
+    // Only update if recording - we want the face count during recording
+    if (recording) {
+      setFaceCountDuringRecording(count);
+    }
+  };
+
   const startRecording = () => {
     setRecording(true);
+    setFaceCountDuringRecording(null); // Reset face count
     chunksRef.current = [];
     
     const stream = webcamRef.current.stream;
@@ -121,12 +130,32 @@ function App() {
       setLoading(true);
       setError(null);
 
+      // Validate face count
+      if (faceCountDuringRecording === null || faceCountDuringRecording === undefined) {
+        setError('Face detection data not available. Please try recording again.');
+        setLoading(false);
+        return;
+      }
+
+      if (faceCountDuringRecording === 0) {
+        setError('No face detected in video. Please ensure your face is clearly visible and try again.');
+        setLoading(false);
+        return;
+      }
+
+      if (faceCountDuringRecording > 1) {
+        setError(`Multiple faces detected (${faceCountDuringRecording}). Only one person should be visible during verification.`);
+        setLoading(false);
+        return;
+      }
+
       // Create form data
       const formDataToSend = new FormData();
       formDataToSend.append('email', formData.email);
       formDataToSend.append('full_name', formData.fullName);
       formDataToSend.append('dob', formData.dob);
       formDataToSend.append('phone', formData.phone);
+      formDataToSend.append('face_count', faceCountDuringRecording.toString());
       formDataToSend.append('document_image', documentFile);
       
       // Convert video blob to file
@@ -255,9 +284,23 @@ function App() {
         </div>
       )}
       <div className="webcam-container">
-        <FaceDetectionWebcam ref={webcamRef} />
+        <FaceDetectionWebcam ref={webcamRef} onFaceCountChange={handleFaceCountChange} />
       </div>
       <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        {faceCountDuringRecording !== null && recording && (
+          <div style={{ 
+            padding: '10px', 
+            marginBottom: '10px', 
+            backgroundColor: faceCountDuringRecording === 1 ? '#e8f5e9' : '#ffebee',
+            borderRadius: '4px',
+            color: faceCountDuringRecording === 1 ? '#2e7d32' : '#c62828',
+            fontWeight: 'bold'
+          }}>
+            {faceCountDuringRecording === 0 && '⚠️ No face detected - Please position yourself in frame'}
+            {faceCountDuringRecording === 1 && '✓ Perfect! One face detected'}
+            {faceCountDuringRecording > 1 && `❌ ${faceCountDuringRecording} faces detected - Only one person allowed!`}
+          </div>
+        )}
         {!recording && !videoBlob && (
           <button className="btn btn-primary" onClick={startRecording}>
             🎥 Start Recording

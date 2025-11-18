@@ -3,6 +3,7 @@ import Webcam from 'react-webcam';
 import * as faceapi from 'face-api.js';
 
 const FaceDetectionWebcam = forwardRef((props, ref) => {
+  const { onFaceCountChange } = props;
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
@@ -57,7 +58,13 @@ const FaceDetectionWebcam = forwardRef((props, ref) => {
         .withFaceLandmarks();
 
       // Update face count
-      setFaceCount(detections.length);
+      const currentFaceCount = detections.length;
+      setFaceCount(currentFaceCount);
+      
+      // Notify parent component of face count change
+      if (onFaceCountChange) {
+        onFaceCountChange(currentFaceCount);
+      }
 
       // Clear canvas
       const ctx = canvas.getContext('2d');

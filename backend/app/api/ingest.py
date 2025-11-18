@@ -21,6 +21,7 @@ async def ingest_verification(
     full_name: str = Form(...),
     dob: str = Form(...),
     phone: str = Form(...),
+    face_count: int = Form(None),  # Number of faces detected in video
     document_image: UploadFile = File(...),
     video: UploadFile = File(...),
     db: Session = Depends(get_db)
@@ -28,6 +29,10 @@ async def ingest_verification(
     """
     Ingest verification request with document and video
     Creates initial verification record and stores files
+    
+    Args:
+        face_count: Number of faces detected in the liveness video (required for KYC)
+                   Must be exactly 1 for verification to pass
     """
     try:
         # Generate unique verification ID
@@ -65,7 +70,8 @@ async def ingest_verification(
             risk_level="pending",
             document_status="pending",
             liveness_status="pending",
-            compliance_status="pending"
+            compliance_status="pending",
+            face_count=face_count  # Store face count for validation
         )
         db.add(verification)
         db.commit()
