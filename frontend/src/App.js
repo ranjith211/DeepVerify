@@ -20,6 +20,7 @@ function App() {
   const [documentFile, setDocumentFile] = useState(null);
   const [videoBlob, setVideoBlob] = useState(null);
   const [faceCountDuringRecording, setFaceCountDuringRecording] = useState(null);
+  const [currentFaceCount, setCurrentFaceCount] = useState(0); // Track current face count at all times
   const [challenge, setChallenge] = useState(null);
   const [language, setLanguage] = useState('english');
   const [verificationId, setVerificationId] = useState(null);
@@ -88,7 +89,10 @@ function App() {
   };
 
   const handleFaceCountChange = (count) => {
-    // Only update if recording - we want the face count during recording
+    // Always update current face count for display
+    setCurrentFaceCount(count);
+    
+    // Update recording face count if recording
     if (recording) {
       setFaceCountDuringRecording(count);
     }
@@ -96,7 +100,8 @@ function App() {
 
   const startRecording = () => {
     setRecording(true);
-    setFaceCountDuringRecording(null); // Reset face count
+    // Initialize with current face count instead of null
+    setFaceCountDuringRecording(currentFaceCount);
     chunksRef.current = [];
     
     const stream = webcamRef.current.stream;
@@ -130,21 +135,19 @@ function App() {
       setLoading(true);
       setError(null);
 
-      // Validate face count
-      if (faceCountDuringRecording === null || faceCountDuringRecording === undefined) {
-        setError('Face detection data not available. Please try recording again.');
-        setLoading(false);
-        return;
-      }
+      // Validate face count - use recorded count or fallback to current
+      const finalFaceCount = faceCountDuringRecording !== null && faceCountDuringRecording !== undefined 
+        ? faceCountDuringRecording 
+        : currentFaceCount;
 
-      if (faceCountDuringRecording === 0) {
+      if (finalFaceCount === 0) {
         setError('No face detected in video. Please ensure your face is clearly visible and try again.');
         setLoading(false);
         return;
       }
 
-      if (faceCountDuringRecording > 1) {
-        setError(`Multiple faces detected (${faceCountDuringRecording}). Only one person should be visible during verification.`);
+      if (finalFaceCount > 1) {
+        setError(`Multiple faces detected (${finalFaceCount}). Only one person should be visible during verification.`);
         setLoading(false);
         return;
       }
@@ -155,7 +158,7 @@ function App() {
       formDataToSend.append('full_name', formData.fullName);
       formDataToSend.append('dob', formData.dob);
       formDataToSend.append('phone', formData.phone);
-      formDataToSend.append('face_count', faceCountDuringRecording.toString());
+      formDataToSend.append('face_count', finalFaceCount.toString());
       formDataToSend.append('document_image', documentFile);
       
       // Convert video blob to file
@@ -287,22 +290,43 @@ function App() {
         <FaceDetectionWebcam ref={webcamRef} onFaceCountChange={handleFaceCountChange} />
       </div>
       <div style={{ textAlign: 'center', marginTop: '20px' }}>
-        {faceCountDuringRecording !== null && recording && (
+        {/* Show face count status during recording */}
+        {recording && (
           <div style={{ 
             padding: '10px', 
             marginBottom: '10px', 
-            backgroundColor: faceCountDuringRecording === 1 ? '#e8f5e9' : '#ffebee',
+            backgroundColor: currentFaceCount === 1 ? '#e8f5e9' : '#ffebee',
             borderRadius: '4px',
-            color: faceCountDuringRecording === 1 ? '#2e7d32' : '#c62828',
+            color: currentFaceCount === 1 ? '#2e7d32' : '#c62828',
             fontWeight: 'bold'
           }}>
-            {faceCountDuringRecording === 0 && '⚠️ No face detected - Please position yourself in frame'}
-            {faceCountDuringRecording === 1 && '✓ Perfect! One face detected'}
-            {faceCountDuringRecording > 1 && `❌ ${faceCountDuringRecording} faces detected - Only one person allowed!`}
+            {currentFaceCount === 0 && '⚠️ No face detected - Please position yourself in frame'}
+            {currentFaceCount === 1 && '✓ Perfect! One face detected - Recording...'}
+            {currentFaceCount > 1 && `❌ ${currentFaceCount} faces detected - Only one person allowed!`}
+          </div>
+        )}
+        {/* Show pre-recording status */}
+        {!recording && !videoBlob && (
+          <div style={{ 
+            padding: '10px', 
+            marginBottom: '10px', 
+            backgroundColor: currentFaceCount === 1 ? '#e3f2fd' : '#fff3e0',
+            borderRadius: '4px',
+            color: currentFaceCount === 1 ? '#1565c0' : '#e65100',
+            fontWeight: 'bold'
+          }}>
+            {currentFaceCount === 0 && 'ℹ️ Position your face in the frame before recording'}
+            {currentFaceCount === 1 && '✓ Ready to record - One face detected'}
+            {currentFaceCount > 1 && `⚠️ ${currentFaceCount} faces detected - Please ensure only you are visible`}
           </div>
         )}
         {!recording && !videoBlob && (
-          <button className="btn btn-primary" onClick={startRecording}>
+          <button 
+            className="btn btn-primary" 
+            onClick={startRecording}
+            disabled={currentFaceCount !== 1}
+            style={{ opacity: currentFaceCount === 1 ? 1 : 0.6 }}
+          >
             🎥 Start Recording
           </button>
         )}
@@ -314,6 +338,9 @@ function App() {
         {videoBlob && !recording && (
           <div>
             <p style={{ color: '#4caf50', fontWeight: 'bold' }}>✓ Video recorded successfully!</p>
+            <p style={{ fontSize: '14px', color: '#666' }}>
+              Face count during recording: {faceCountDuringRecording !== null ? faceCountDuringRecording : currentFaceCount}
+            </p>
           </div>
         )}
       </div>
