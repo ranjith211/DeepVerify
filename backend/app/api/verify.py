@@ -2,10 +2,14 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.database_models import User, VerificationLog
-from app.services.document_service import DocumentService
-from app.services.liveness_service import LivenessService
+from app.services.document_service import get_ai_document_service
+from app.services.liveness_service import get_ai_liveness_service
 from app.services.compliance_service import ComplianceService
 from app.services.xai_service import XAIService
+
+# Get AI service instances
+DocumentService = get_ai_document_service()
+LivenessService = get_ai_liveness_service()
 from app.utils.encryption import encryption_service
 from app.mongodb import get_ai_logs, get_audit_logs
 import os
@@ -41,13 +45,38 @@ async def verify(
         # Decrypt user data
         full_name = encryption_service.decrypt(user.full_name_encrypted)
         dob = encryption_service.decrypt(user.dob_encrypted)
+        print(f"\n{'='*60}\nVERIFICATION REQUEST: User entered Name='{full_name}', DOB='{dob}'\n{'='*60}")
         
-        # File paths
-        doc_path = os.path.join(UPLOAD_DIR, f"{verification_id}_document.jpg")
-        video_path = os.path.join(UPLOAD_DIR, f"{verification_id}_video.mp4")
+        # File paths - try multiple extensions
+        doc_path = None
+        video_path = None
         
-        # 1. Document Analysis
-        doc_valid, doc_confidence, doc_analysis = DocumentService.analyze_document(doc_path)
+        # Find document file
+        for ext in ['.jpg', '.jpeg', '.png']:
+            path = os.path.join(UPLOAD_DIR, f"{verification_id}_document{ext}")
+            if os.path.exists(path):
+                doc_path = path
+                break
+        
+        # Find video file
+        for ext in ['.webm', '.mp4', '.mov']:
+            path = os.path.join(UPLOAD_DIR, f"{verification_id}_video{ext}")
+            if os.path.exists(path):
+                video_path = path
+                break
+        
+        if not doc_path or not os.path.exists(doc_path):
+            raise HTTPException(status_code=404, detail="Document file not found")
+        
+        if not video_path or not os.path.exists(video_path):
+            raise HTTPException(status_code=404, detail="Video file not found")
+        
+        # 1. Document Analysis with name/DOB verification
+        doc_valid, doc_confidence, doc_analysis = DocumentService.analyze_document(
+            doc_path, 
+            expected_name=full_name,
+            expected_dob=dob
+        )
         verification.document_status = "passed" if doc_valid else "failed"
         
         # 2. Liveness Check (mock challenge for now)
@@ -93,6 +122,14 @@ async def verify(
         )
         verification.explanation = explanation
         verification.completed_at = datetime.utcnow()
+        
+        # Update user KYC status based on verification result
+        if verification.status == "approved":
+            user.kyc_status = "approved"
+        elif verification.status == "rejected":
+            user.kyc_status = "rejected"
+        else:
+            user.kyc_status = "pending"
         
         # Save to database
         db.commit()
