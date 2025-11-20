@@ -36,6 +36,7 @@ class VerificationLog(Base):
     document_analysis = Column(Text, nullable=True)  # JSON string with full document analysis
     liveness_analysis = Column(Text, nullable=True)  # JSON string with full liveness analysis
     compliance_analysis = Column(Text, nullable=True)  # JSON string with compliance checks
+    liveness_challenge = Column(Text, nullable=True)  # JSON string with the challenge given to user
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
