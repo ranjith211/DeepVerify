@@ -73,18 +73,48 @@ async def ingest_verification(
         with open(video_path, "wb") as buffer:
             shutil.copyfileobj(video.file, buffer)
         
-        # Create verification log
-        verification = VerificationLog(
-            verification_id=verification_id,
-            user_id=user.id,
-            status="pending",
-            risk_score=0.0,
-            risk_level="pending",
-            document_status="pending",
-            liveness_status="pending",
-            compliance_status="pending"
-        )
-        db.add(verification)
+        # Check if verification log already exists for this user
+        existing_verification = db.query(VerificationLog).filter(
+            VerificationLog.user_id == user.id
+        ).first()
+        
+        if existing_verification:
+            # Update existing record for re-KYC
+            print(f"RE-KYC: Updating existing verification record for user {user.email}")
+            existing_verification.verification_id = verification_id
+            existing_verification.status = "pending"
+            existing_verification.risk_score = 0.0
+            existing_verification.risk_level = "pending"
+            existing_verification.document_status = "pending"
+            existing_verification.liveness_status = "pending"
+            existing_verification.compliance_status = "pending"
+            existing_verification.admin_status = "pending_review"
+            existing_verification.admin_notes = None  # Clear old notes
+            existing_verification.rejection_reason = None  # Clear old rejection reason
+            existing_verification.explanation = None
+            existing_verification.document_analysis = None
+            existing_verification.liveness_analysis = None
+            existing_verification.compliance_analysis = None
+            existing_verification.updated_at = datetime.utcnow()
+            existing_verification.completed_at = None
+            verification = existing_verification
+        else:
+            # Create new verification log for first-time KYC
+            print(f"NEW KYC: Creating new verification record for user {user.email}")
+            verification = VerificationLog(
+                verification_id=verification_id,
+                user_id=user.id,
+                status="pending",
+                risk_score=0.0,
+                risk_level="pending",
+                document_status="pending",
+                liveness_status="pending",
+                compliance_status="pending",
+                admin_status="pending_review",
+                admin_notes=None
+            )
+            db.add(verification)
+        
         db.commit()
         
         return VerificationResponse(
