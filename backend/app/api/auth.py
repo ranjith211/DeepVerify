@@ -170,7 +170,7 @@ async def get_current_user(token: str, db: Session = Depends(get_db)):
             "liveness_status": latest_verification.liveness_status,
             "compliance_status": latest_verification.compliance_status,
             "risk_level": latest_verification.risk_level,
-            "admin_notes": latest_verification.admin_notes,
+            "rejection_reason": latest_verification.rejection_reason,  # User-facing suggestions
             "created_at": latest_verification.created_at.isoformat() if latest_verification.created_at else None
         }
     
