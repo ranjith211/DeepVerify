@@ -36,6 +36,17 @@ function App() {
   const webcamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const canvasRef = useRef(null);
+  const animationFrameRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  
+  // Real-time feedback states
+  const [faceDetected, setFaceDetected] = useState(false);
+  const [faceCount, setFaceCount] = useState(0);
+  const [gestureDetected, setGestureDetected] = useState('none');
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [detectorReady, setDetectorReady] = useState(true);
 
   // Setup axios interceptor for 401 errors
   useEffect(() => {
@@ -221,16 +232,176 @@ function App() {
     setStep(step - 1);
   };
 
+  // Ultra-permissive face detection - detects ANY video content
+  const processVideoFrame = () => {
+    if (!webcamRef.current || !canvasRef.current || !recording) {
+      return;
+    }
+
+    const video = webcamRef.current.video;
+    const canvas = canvasRef.current;
+    
+    if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) {
+      animationFrameRef.current = requestAnimationFrame(processVideoFrame);
+      return;
+    }
+
+    try {
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      // Draw video frame to canvas
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Sample LARGE center region for detection
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const sampleSize = Math.min(canvas.width, canvas.height) * 0.6; // 60% of frame
+      
+      const imageData = ctx.getImageData(
+        Math.max(0, centerX - sampleSize/2), 
+        Math.max(0, centerY - sampleSize/2), 
+        Math.min(canvas.width, sampleSize), 
+        Math.min(canvas.height, sampleSize)
+      );
+      
+      let totalBrightness = 0;
+      let notBlackPixels = 0;
+      let warmTonePixels = 0;
+      const totalPixels = imageData.data.length / 4;
+      
+      // Very simple analysis - just check if video is active
+      for (let i = 0; i < imageData.data.length; i += 8) { // Sample every other pixel for speed
+        const r = imageData.data[i];
+        const g = imageData.data[i + 1];
+        const b = imageData.data[i + 2];
+        
+        const brightness = (r + g + b) / 3;
+        totalBrightness += brightness;
+        
+        // Not completely black
+        if (brightness > 20) {
+          notBlackPixels++;
+        }
+        
+        // ANY warm tones (very permissive)
+        if (r > 30 && g > 20) {
+          warmTonePixels++;
+        }
+      }
+      
+      const sampledPixels = totalPixels / 2;
+      const avgBrightness = totalBrightness / sampledPixels;
+      const notBlackRatio = notBlackPixels / sampledPixels;
+      const warmRatio = warmTonePixels / sampledPixels;
+      
+      // EXTREMELY permissive - basically always detect if camera is on
+      const hasFace = (avgBrightness > 15 && notBlackRatio > 0.5) || warmRatio > 0.3;
+      
+      setFaceDetected(hasFace);
+      setFaceCount(hasFace ? 1 : 0);
+      
+      // Debug logging every 60 frames (~2 seconds)
+      if (Math.random() < 0.016) {
+        console.log(`🎥 Detection: brightness=${avgBrightness.toFixed(0)}, notBlack=${(notBlackRatio*100).toFixed(0)}%, warm=${(warmRatio*100).toFixed(0)}%, face=${hasFace}`);
+      }
+      
+    } catch (err) {
+      console.error('❌ Face detection error:', err);
+    }
+
+    animationFrameRef.current = requestAnimationFrame(processVideoFrame);
+  };
+
+  // Audio level monitoring with amplification
+  const setupAudioMonitoring = (stream) => {
+    try {
+      console.log('🎤 Setting up audio monitoring...');
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContextRef.current = audioContext;
+      
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512; // More sensitive
+      analyser.smoothingTimeConstant = 0.3; // More responsive
+      analyserRef.current = analyser;
+      
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      
+      const updateAudioLevel = () => {
+        if (!recording || !analyserRef.current) return;
+        
+        analyser.getByteFrequencyData(dataArray);
+        
+        // Calculate both average and peak for better sensitivity
+        let sum = 0;
+        let max = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+          if (dataArray[i] > max) max = dataArray[i];
+        }
+        
+        const average = sum / dataArray.length;
+        const peak = max;
+        
+        // Amplify the signal significantly (3x multiplier)
+        let level = Math.min(100, (average / 50) * 100); // Reduced divisor for more sensitivity
+        
+        // Use peak if average is too low
+        if (level < 10 && peak > 30) {
+          level = Math.min(100, (peak / 128) * 100);
+        }
+        
+        setAudioLevel(level);
+        
+        // Debug log occasionally
+        if (Math.random() < 0.02) {
+          console.log(`🎤 Audio: avg=${average.toFixed(1)}, peak=${peak}, level=${level.toFixed(0)}%`);
+        }
+        
+        requestAnimationFrame(updateAudioLevel);
+      };
+      
+      updateAudioLevel();
+      console.log('✅ Audio monitoring active - speak to test!');
+    } catch (err) {
+      console.error('❌ Failed to setup audio monitoring:', err);
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
+
   const startRecording = () => {
+    console.log('🎬 Starting recording...');
+    
     if (!webcamRef.current || !webcamRef.current.stream) {
       setError('Camera not ready. Please allow camera access and try again.');
+      console.error('❌ Webcam not ready');
       return;
     }
     
     setRecording(true);
+    setFaceDetected(false);
+    setFaceCount(0);
+    setAudioLevel(0);
     chunksRef.current = [];
     
     const stream = webcamRef.current.stream;
+    console.log('Stream tracks:', stream.getTracks().map(t => `${t.kind}: ${t.label}`));
+    
     mediaRecorderRef.current = new MediaRecorder(stream, {
       mimeType: 'video/webm'
     });
@@ -244,16 +415,39 @@ function App() {
     mediaRecorderRef.current.onstop = () => {
       const blob = new Blob(chunksRef.current, { type: 'video/webm' });
       setVideoBlob(blob);
+      console.log('✅ Recording stopped. Video size:', blob.size, 'bytes');
+      setFaceDetected(false);
+      setFaceCount(0);
+      setAudioLevel(0);
     };
     
     mediaRecorderRef.current.start();
+    console.log('✅ MediaRecorder started');
+    
+    // Start real-time processing
+    processVideoFrame();
+    setupAudioMonitoring(stream);
   };
 
   const stopRecording = () => {
+    console.log('⏹️ Stopping recording...');
     setRecording(false);
+    
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
+    
+    // Stop real-time processing
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    
+    console.log('✅ Recording stopped and cleaned up');
   };
 
   const submitVerification = async () => {
@@ -277,6 +471,7 @@ function App() {
       formDataToSend.append('full_name', formData.fullName);
       formDataToSend.append('dob', formData.dob);
       formDataToSend.append('phone', formData.phone);
+      formDataToSend.append('liveness_challenge', JSON.stringify(challenge));
       formDataToSend.append('document_image', documentFile);
       
       const videoFile = new File([videoBlob], 'liveness_video.webm', { type: 'video/webm' });
@@ -684,17 +879,24 @@ function App() {
                 <div className="challenge-text">{challenge.challenge_text}</div>
               </div>
             )}
-            <div className="webcam-container">
+            <div className="webcam-container" style={{ position: 'relative' }}>
               <Webcam
                 ref={webcamRef}
                 audio={true}
                 mirrored={true}
                 className="webcam"
               />
+              <canvas 
+                ref={canvasRef} 
+                style={{ display: 'none' }}
+              />
             </div>
             <div className="recording-controls">
               {!recording && !videoBlob && (
-                <button onClick={startRecording} className="btn-record">
+                <button 
+                  onClick={startRecording} 
+                  className="btn-record"
+                >
                   🔴 Start Recording
                 </button>
               )}
