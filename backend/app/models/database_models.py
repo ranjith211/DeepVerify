@@ -30,7 +30,12 @@ class VerificationLog(Base):
     requires_human_review = Column(Boolean, default=False)
     explanation = Column(Text)
     admin_status = Column(String, nullable=True)  # approved, rejected, pending_review
-    admin_notes = Column(Text, nullable=True)
+    admin_notes = Column(Text, nullable=True)  # Admin's personal notes (short, visible to admin only)
+    rejection_reason = Column(Text, nullable=True)  # User-facing rejection suggestions (detailed, visible to user)
+    # Detailed analysis JSON stored as text
+    document_analysis = Column(Text, nullable=True)  # JSON string with full document analysis
+    liveness_analysis = Column(Text, nullable=True)  # JSON string with full liveness analysis
+    compliance_analysis = Column(Text, nullable=True)  # JSON string with compliance checks
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
