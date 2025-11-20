@@ -24,6 +24,7 @@ async def ingest_verification(
     full_name: str = Form(...),
     dob: str = Form(...),
     phone: str = Form(...),
+    liveness_challenge: str = Form(...),
     document_image: UploadFile = File(...),
     video: UploadFile = File(...),
     db: Session = Depends(get_db)
@@ -95,6 +96,7 @@ async def ingest_verification(
             existing_verification.document_analysis = None
             existing_verification.liveness_analysis = None
             existing_verification.compliance_analysis = None
+            existing_verification.liveness_challenge = liveness_challenge  # Store the challenge
             existing_verification.updated_at = datetime.utcnow()
             existing_verification.completed_at = None
             verification = existing_verification
@@ -111,7 +113,8 @@ async def ingest_verification(
                 liveness_status="pending",
                 compliance_status="pending",
                 admin_status="pending_review",
-                admin_notes=None
+                admin_notes=None,
+                liveness_challenge=liveness_challenge
             )
             db.add(verification)
         
