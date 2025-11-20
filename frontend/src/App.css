@@ -1008,3 +1008,12 @@
   font-weight: 600;
   font-size: 1.1rem;
 }
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
