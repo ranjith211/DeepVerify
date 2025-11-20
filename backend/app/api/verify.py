@@ -79,10 +79,15 @@ async def verify(
         )
         verification.document_status = "passed" if doc_valid else "failed"
         
-        # 2. Liveness Check (mock challenge for now)
-        mock_challenge = {"expected_phrase": "blue cat", "expected_gesture": "hold up three fingers"}
+        # 2. Liveness Check using stored challenge
+        import json
+        if not verification.liveness_challenge:
+            raise HTTPException(status_code=400, detail="Liveness challenge not found")
+        
+        challenge = json.loads(verification.liveness_challenge)
+        print(f"Using stored challenge: {challenge}")
         liveness_valid, liveness_confidence, liveness_analysis = LivenessService.validate_liveness(
-            video_path, mock_challenge
+            video_path, challenge
         )
         verification.liveness_status = "passed" if liveness_valid else "failed"
         
