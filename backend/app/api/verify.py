@@ -101,17 +101,26 @@ async def verify(
         
         verification.risk_score = overall_risk
         
-        # Determine risk level
+        # Determine risk level and admin status
         if overall_risk < 0.3:
             verification.risk_level = "low"
             verification.status = "approved"
+            # Low risk but still needs admin review
+            if not verification.admin_status or verification.admin_status == "pending_review":
+                verification.admin_status = "pending_review"
         elif overall_risk < 0.6:
             verification.risk_level = "medium"
             verification.status = "review_required"
             verification.requires_human_review = True
+            # Medium risk requires admin review
+            if not verification.admin_status or verification.admin_status == "pending_review":
+                verification.admin_status = "pending_review"
         else:
             verification.risk_level = "high"
             verification.status = "rejected"
+            # High risk requires admin review
+            if not verification.admin_status or verification.admin_status == "pending_review":
+                verification.admin_status = "pending_review"
         
         # 5. Generate Explanation
         explanation = XAIService.generate_explanation(
@@ -123,12 +132,20 @@ async def verify(
         verification.explanation = explanation
         verification.completed_at = datetime.utcnow()
         
+        # Store detailed analysis as JSON strings
+        import json
+        verification.document_analysis = json.dumps(doc_analysis)
+        verification.liveness_analysis = json.dumps(liveness_analysis)
+        verification.compliance_analysis = json.dumps(compliance_result)
+        
         # Update user KYC status based on verification result
-        if verification.status == "approved":
+        # Keep as pending until admin reviews (except for very low risk auto-approve)
+        if verification.status == "approved" and overall_risk < 0.2:
             user.kyc_status = "approved"
-        elif verification.status == "rejected":
+        elif verification.status == "rejected" and overall_risk > 0.8:
             user.kyc_status = "rejected"
         else:
+            # All other cases need admin review
             user.kyc_status = "pending"
         
         # Save to database
