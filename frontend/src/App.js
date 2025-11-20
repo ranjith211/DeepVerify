@@ -6,9 +6,9 @@ import axios from 'axios';
 const API_BASE_URL = 'http://localhost:8000/api';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [token, setToken] = useState(localStorage.getItem('token') || '');
-  const [showLogin, setShowLogin] = useState(true);
+  const [showLogin, setShowLogin] = useState(!localStorage.getItem('token'));
   const [userData, setUserData] = useState(null);
   const [sessionExpired, setSessionExpired] = useState(false);
   
@@ -317,37 +317,48 @@ function App() {
     const recommendations = [];
     const verification = userData.latest_verification;
     
-    if (verification.document_status === 'failed') {
-      recommendations.push({
-        title: 'Document Quality',
-        items: [
-          'Use a high-resolution camera or scanner',
-          'Ensure good lighting - no shadows or glare',
-          'Keep the document flat and fully visible',
-          'Make sure all text is clear and readable',
-          'Use the original document, not a photocopy'
-        ]
+    // Parse rejection_reason which contains structured suggestions for user
+    if (verification.rejection_reason) {
+      const sections = verification.rejection_reason.split('\n\n');
+      sections.forEach(section => {
+        const lines = section.split('\n');
+        if (lines.length > 0) {
+          const title = lines[0];
+          const items = lines.slice(1).filter(line => line.trim());
+          if (items.length > 0) {
+            recommendations.push({ title, items });
+          }
+        }
       });
     }
     
-    if (verification.liveness_status === 'failed') {
-      recommendations.push({
-        title: 'Liveness Check',
-        items: [
-          'Record in a well-lit environment',
-          'Ensure your face is clearly visible',
-          'Speak clearly and match the exact phrase shown',
-          'Perform the exact gesture requested (show correct number of fingers)',
-          'Avoid pre-recorded videos or photos'
-        ]
-      });
-    }
-    
-    if (verification.admin_notes) {
-      recommendations.push({
-        title: 'Admin Feedback',
-        items: [verification.admin_notes]
-      });
+    // Fallback to basic recommendations if no admin notes
+    if (recommendations.length === 0) {
+      if (verification.document_status === 'failed') {
+        recommendations.push({
+          title: '📄 Document Quality',
+          items: [
+            '• Use a high-resolution camera or scanner',
+            '• Ensure good lighting - no shadows or glare',
+            '• Keep the document flat and fully visible',
+            '• Make sure all text is clear and readable',
+            '• Use the original document, not a photocopy'
+          ]
+        });
+      }
+      
+      if (verification.liveness_status === 'failed') {
+        recommendations.push({
+          title: '🎥 Liveness Check',
+          items: [
+            '• Record in a well-lit environment',
+            '• Ensure your face is clearly visible',
+            '• Speak clearly and match the exact phrase shown',
+            '• Perform the exact gesture requested',
+            '• Avoid pre-recorded videos or photos'
+          ]
+        });
+      }
     }
     
     return recommendations;
@@ -440,15 +451,35 @@ function App() {
             )}
             
             {kycStatus === 'pending' && (
-              <p className="status-message warning">
-                Your KYC submission is under review. Our team will review it shortly.
-              </p>
+              <>
+                <p className="status-message pending">
+                  Your KYC is under review by our admin team. We'll notify you once it's processed.
+                </p>
+                {latestVerification && latestVerification.admin_status === 'pending_review' && (
+                  <div className="pending-review-info">
+                    <div className="info-icon">⏳</div>
+                    <div className="info-content">
+                      <h3>Awaiting Admin Review</h3>
+                      <p>Your submission has been received and is in the queue for manual verification. This typically takes 1-2 business days.</p>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
             
             {kycStatus === 'rejected' && (
-              <p className="status-message error">
-                Your KYC was rejected. Please review the recommendations below and resubmit.
-              </p>
+              <>
+                <p className="status-message error">
+                  Your KYC submission was rejected. Please review the detailed recommendations below.
+                </p>
+                <div className="rejection-alert">
+                  <div className="alert-icon">⚠️</div>
+                  <div className="alert-content">
+                    <h3>Action Required</h3>
+                    <p>Please carefully read all suggestions below and address each issue before resubmitting your KYC application.</p>
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
@@ -484,7 +515,18 @@ function App() {
 
           {recommendations.length > 0 && (
             <div className="recommendations">
-              <h3>📋 Recommendations for Re-submission</h3>
+              <h3>📋 Recommendations for Successful Re-submission</h3>
+              <div className="recommendations-intro">
+                <p>Our AI-powered system has identified the following areas that need your attention. Please address each recommendation carefully to ensure your next submission is successful.</p>
+                {latestVerification && (
+                  <div className="failure-summary">
+                    <strong>Issues Detected:</strong>
+                    {latestVerification.document_status === 'failed' && <span className="issue-tag">📄 Document</span>}
+                    {latestVerification.liveness_status === 'failed' && <span className="issue-tag">🎥 Liveness</span>}
+                    {latestVerification.compliance_status === 'failed' && <span className="issue-tag">⚖️ Compliance</span>}
+                  </div>
+                )}
+              </div>
               {recommendations.map((rec, idx) => (
                 <div key={idx} className="recommendation-section">
                   <h4>{rec.title}</h4>
