@@ -200,6 +200,14 @@ class LivenessService:
                 (1 - antispoofing["spoof_score"]) * 0.3
             )
             
+            # Generate detailed summary for admin display
+            check_summary = []
+            check_summary.append(f"✅ Audio Match: {audio_analysis['match_score']:.1%}" if audio_valid else f"❌ Audio Match: {audio_analysis['match_score']:.1%} (Failed)")
+            check_summary.append(f"✅ Gesture Match: {video_analysis['gesture_match']:.1%}" if gesture_valid else f"❌ Gesture Match: {video_analysis['gesture_match']:.1%} (Failed)")
+            check_summary.append(f"✅ Face Detected" if face_present else f"❌ No Face Detected (Failed)")
+            check_summary.append(f"✅ Anti-Spoofing: {antispoofing['spoof_score']:.1%}" if not_spoofed else f"❌ Anti-Spoofing: {antispoofing['spoof_score']:.1%} (Failed)")
+            overall_status = "All checks passed" if is_valid else "Verification failed - see individual checks"
+            
             analysis = {
                 "lip_sync_match": bool(audio_valid),
                 "lip_sync_confidence": float(audio_analysis["match_score"]),
@@ -212,6 +220,11 @@ class LivenessService:
                 "transcribed_text": str(audio_analysis.get("transcribed_text", "")),
                 "detected_gesture": str(video_analysis.get("detected_gesture", "")),
                 "face_landmarks_detected": bool(video_analysis.get("face_detected", False)),
+                "spoof_score": float(antispoofing["spoof_score"]),
+                "motion_detected": antispoofing["spoof_score"] < 0.5,
+                "details": overall_status,
+                "checks": check_summary,
+                "issues": [check.replace("❌ ", "").replace(" (Failed)", "") for check in check_summary if "❌" in check],
                 "analysis_notes": self._generate_notes(is_valid, audio_valid, gesture_valid, not_spoofed)
             }
             
