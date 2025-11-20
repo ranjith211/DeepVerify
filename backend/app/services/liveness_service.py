@@ -171,11 +171,15 @@ class LivenessService:
             video_analysis = self._analyze_video(video_path, challenge.get("expected_gesture", ""))
             antispoofing = self._detect_spoofing(video_path)
             
-            # Combine results - ALL must pass
-            audio_valid = audio_analysis["match_score"] > 0.7
-            gesture_valid = video_analysis["gesture_match"] > 0.7
+            # Combine results - use more lenient thresholds for better UX
+            # Audio: 0.3 threshold (at least some word match)
+            # Gesture: 0.5 threshold (gesture detected with reasonable confidence)
+            # Face: Must be present
+            # Spoofing: 0.5 threshold (allow some variance in motion)
+            audio_valid = audio_analysis["match_score"] > 0.3
+            gesture_valid = video_analysis["gesture_match"] > 0.5
             face_present = video_analysis.get("face_detected", False)
-            not_spoofed = antispoofing["spoof_score"] < 0.3
+            not_spoofed = antispoofing["spoof_score"] < 0.5
             
             # Log validation details
             print(f"\n{'='*60}")
@@ -214,11 +218,18 @@ class LivenessService:
                 "gesture_detected": bool(gesture_valid),
                 "gesture_confidence": float(video_analysis["gesture_match"]),
                 "audio_match": bool(audio_valid),
+                "audio_match_score": float(audio_analysis["match_score"]),
+                "audio_available": bool(audio_analysis.get("match_score", 0) > 0 or audio_analysis.get("transcribed_text") != "[AI MODEL NOT LOADED]"),
                 "audio_confidence": float(audio_analysis["transcription_confidence"]),
+                "gesture_match": bool(gesture_valid),
+                "gesture_match_score": float(video_analysis["gesture_match"]),
+                "expected_phrase": str(challenge.get("expected_phrase", "")),
+                "expected_gesture": str(challenge.get("expected_gesture", "")),
                 "deepfake_probability": float(antispoofing["spoof_score"]),
                 "video_quality": "good" if not_spoofed else "suspicious",
                 "transcribed_text": str(audio_analysis.get("transcribed_text", "")),
                 "detected_gesture": str(video_analysis.get("detected_gesture", "")),
+                "face_detected": bool(video_analysis.get("face_detected", False)),
                 "face_landmarks_detected": bool(video_analysis.get("face_detected", False)),
                 "spoof_score": float(antispoofing["spoof_score"]),
                 "motion_detected": antispoofing["spoof_score"] < 0.5,
@@ -266,13 +277,46 @@ class LivenessService:
             audio_path = video_path.replace(".webm", ".wav").replace(".mp4", ".wav")
             self._extract_audio(video_path, audio_path)
             
-            # Transcribe audio
-            result = self.speech_recognizer(audio_path)
+            if not os.path.exists(audio_path):
+                return {
+                    "match_score": 0.0,
+                    "transcription_confidence": 0.0,
+                    "transcribed_text": "[AUDIO FILE NOT CREATED]"
+                }
+            
+            # Check audio file size - if too small, likely no audio
+            audio_size = os.path.getsize(audio_path)
+            if audio_size < 1000:  # Less than 1KB
+                print(f"WARNING: Audio file too small ({audio_size} bytes)")
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+                return {
+                    "match_score": 0.0,
+                    "transcription_confidence": 0.0,
+                    "transcribed_text": "[NO AUDIO DETECTED]"
+                }
+            
+            # Transcribe audio with suppress_tokens to avoid hallucinations
+            result = self.speech_recognizer(
+                audio_path,
+                generate_kwargs={
+                    "language": "english",
+                    "task": "transcribe",
+                    "temperature": 0.0,  # More deterministic
+                }
+            )
             transcribed = result["text"].lower().strip()
             expected = expected_phrase.lower().strip()
             
-            # Calculate similarity score (simple word matching)
-            match_score = self._calculate_text_similarity(transcribed, expected)
+            # Detect Whisper hallucination patterns (repeating numbers/characters)
+            is_hallucination = self._detect_hallucination(transcribed)
+            if is_hallucination:
+                print(f"WARNING: Detected Whisper hallucination: '{transcribed[:100]}'")
+                transcribed = "[UNCLEAR AUDIO - PLEASE SPEAK LOUDER]"
+                match_score = 0.0
+            else:
+                # Calculate similarity score (simple word matching)
+                match_score = self._calculate_text_similarity(transcribed, expected)
             
             # Clean up temp file
             if os.path.exists(audio_path):
@@ -280,7 +324,7 @@ class LivenessService:
             
             return {
                 "match_score": match_score,
-                "transcription_confidence": 0.9,
+                "transcription_confidence": 0.9 if not is_hallucination else 0.0,
                 "transcribed_text": transcribed
             }
         except Exception as e:
@@ -361,8 +405,7 @@ class LivenessService:
             }
     
     def _detect_spoofing(self, video_path: str) -> Dict:
-        """Detect video spoofing/deepfake"""
-        # This is a simplified version - in production use dedicated anti-spoofing models
+        """Detect video spoofing/deepfake - LENIENT for better UX"""
         try:
             cap = cv2.VideoCapture(video_path)
             
@@ -378,7 +421,7 @@ class LivenessService:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 
                 if prev_frame is not None:
-                    # Calculate motion between frames (real videos have natural motion)
+                    # Calculate motion between frames
                     diff = cv2.absdiff(prev_frame, gray)
                     motion = np.mean(diff)
                     motion_scores.append(motion)
@@ -388,14 +431,22 @@ class LivenessService:
             
             cap.release()
             
-            # Analyze motion patterns
-            if motion_scores:
+            # More lenient motion analysis - most real videos will pass
+            if motion_scores and len(motion_scores) > 0:
                 avg_motion = np.mean(motion_scores)
                 motion_variance = np.var(motion_scores)
                 
-                # Low motion or very uniform motion = suspicious
-                spoof_score = 0.8 if avg_motion < 2 or motion_variance < 0.5 else 0.1
+                # Very lenient thresholds - only fail obvious static images
+                # avg_motion < 0.5 = completely static image
+                # motion_variance < 0.1 = no variation at all
+                if avg_motion < 0.5 and motion_variance < 0.1:
+                    spoof_score = 0.8  # High suspicion
+                elif avg_motion < 1.0:
+                    spoof_score = 0.4  # Medium suspicion - still pass threshold
+                else:
+                    spoof_score = 0.1  # Low suspicion
             else:
+                # No frames analyzed = suspicious
                 spoof_score = 0.9
             
             return {
@@ -413,26 +464,79 @@ class LivenessService:
     def _extract_audio(video_path: str, audio_path: str):
         """Extract audio from video file"""
         try:
-            from moviepy.editor import VideoFileClip
+            from moviepy import VideoFileClip
             video = VideoFileClip(video_path)
-            video.audio.write_audiofile(audio_path, verbose=False, logger=None)
+            if video.audio is None:
+                print(f"WARNING: No audio track in video file {video_path}")
+                # Create empty wav file
+                import wave
+                with wave.open(audio_path, 'w') as wav_file:
+                    wav_file.setnchannels(1)
+                    wav_file.setsampwidth(2)
+                    wav_file.setframerate(44100)
+            else:
+                # moviepy 2.x doesn't support verbose/logger parameters
+                video.audio.write_audiofile(audio_path)
             video.close()
         except Exception as e:
             print(f"Audio extraction error: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    @staticmethod
+    def _detect_hallucination(text: str) -> bool:
+        """Detect if Whisper is hallucinating (repeating patterns)"""
+        if not text or len(text) < 10:
+            return True
+        
+        # Check for repeating short patterns (common hallucination)
+        # e.g., "3, 2, 3, 2, 3, 2, ..." or "Thank you. Thank you. Thank you."
+        words = text.split()
+        if len(words) > 10:
+            # Check if same word/pattern repeats more than 5 times
+            from collections import Counter
+            word_counts = Counter(words)
+            most_common = word_counts.most_common(1)
+            if most_common and most_common[0][1] > 5:
+                # If one word appears more than 5 times and it's very short
+                if len(most_common[0][0]) <= 3:
+                    return True
+        
+        # Check for very repetitive character patterns
+        if len(set(text.replace(' ', '').replace(',', ''))) < 5:
+            # Less than 5 unique characters = likely hallucination
+            return True
+        
+        return False
     
     @staticmethod
     def _calculate_text_similarity(text1: str, text2: str) -> float:
-        """Calculate similarity between two texts"""
-        words1 = set(text1.lower().split())
-        words2 = set(text2.lower().split())
+        """Calculate similarity between two texts using fuzzy matching"""
+        from difflib import SequenceMatcher
         
-        if not words1 or not words2:
+        text1 = text1.lower().strip()
+        text2 = text2.lower().strip()
+        
+        if not text1 or not text2:
             return 0.0
         
-        intersection = words1.intersection(words2)
-        union = words1.union(words2)
+        # Use SequenceMatcher for better fuzzy matching
+        # This handles phonetic similarities better
+        similarity = SequenceMatcher(None, text1, text2).ratio()
         
-        return len(intersection) / len(union) if union else 0.0
+        # Also check word-level matching
+        words1 = set(text1.split())
+        words2 = set(text2.split())
+        
+        if words1 and words2:
+            intersection = words1.intersection(words2)
+            union = words1.union(words2)
+            word_similarity = len(intersection) / len(union)
+            
+            # Use the higher of the two scores
+            similarity = max(similarity, word_similarity)
+        
+        return similarity
     
     @staticmethod
     def _classify_gesture(hand_landmarks) -> str:
