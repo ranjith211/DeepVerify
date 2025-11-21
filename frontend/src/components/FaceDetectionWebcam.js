@@ -1,17 +1,14 @@
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import Webcam from 'react-webcam';
 import * as faceapi from 'face-api.js';
-import { Hands, HAND_CONNECTIONS } from '@mediapipe/hands';
 
 const FaceDetectionWebcam = forwardRef((props, ref) => {
-  const { onFaceCountChange, onGestureDetected } = props;
+  const { onFaceCountChange } = props;
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [faceCount, setFaceCount] = useState(0);
-  const [gestureDetected, setGestureDetected] = useState(null);
   const intervalRef = useRef(null);
-  const handsRef = useRef(null);
 
   // Expose webcamRef to parent component
   useImperativeHandle(ref, () => webcamRef.current);
@@ -32,111 +29,14 @@ const FaceDetectionWebcam = forwardRef((props, ref) => {
       }
     };
 
-    // Initialize MediaPipe Hands
-    const initializeHands = () => {
-      const hands = new Hands({
-        locateFile: (file) => {
-          return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-        }
-      });
-
-      hands.setOptions({
-        maxNumHands: 2,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
-
-      hands.onResults(onHandsResults);
-      handsRef.current = hands;
-    };
-
     loadModels();
-    initializeHands();
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-      if (handsRef.current) {
-        handsRef.current.close();
-      }
     };
   }, []);
-
-  const detectThumbsUp = (landmarks) => {
-    if (!landmarks || landmarks.length === 0) return false;
-
-    // Hand landmarks indices (MediaPipe Hands)
-    // Thumb: 1-4, Index: 5-8, Middle: 9-12, Ring: 13-16, Pinky: 17-20
-    const handLandmarks = landmarks[0];
-    
-    const thumbTip = handLandmarks.landmark[4];
-    const thumbIp = handLandmarks.landmark[3];
-    const indexTip = handLandmarks.landmark[8];
-    const indexMcp = handLandmarks.landmark[5];
-    const middleTip = handLandmarks.landmark[12];
-    const ringTip = handLandmarks.landmark[16];
-    const pinkyTip = handLandmarks.landmark[20];
-    const wrist = handLandmarks.landmark[0];
-
-    // Thumbs up detection logic:
-    // 1. Thumb is extended (tip higher than IP joint)
-    // 2. Other fingers are curled down
-    // 3. Hand orientation is upright
-
-    const thumbExtended = thumbTip.y < thumbIp.y - 0.05;
-    const indexCurled = indexTip.y > indexMcp.y;
-    const middleCurled = middleTip.y > wrist.y - 0.05;
-    const ringCurled = ringTip.y > wrist.y - 0.05;
-    const pinkyCurled = pinkyTip.y > wrist.y - 0.05;
-
-    return thumbExtended && indexCurled && middleCurled && ringCurled && pinkyCurled;
-  };
-
-  const onHandsResults = (results) => {
-    const gesture = detectThumbsUp(results.multiHandLandmarks);
-    setGestureDetected(gesture);
-    
-    if (onGestureDetected) {
-      onGestureDetected(gesture);
-    }
-
-    // Draw hand landmarks on canvas
-    if (results.multiHandLandmarks && canvasRef.current) {
-      const ctx = canvasRef.current.getContext('2d');
-      
-      results.multiHandLandmarks.forEach((landmarks) => {
-        // Draw connections
-        ctx.strokeStyle = gesture ? '#00ff00' : '#ffff00';
-        ctx.lineWidth = 2;
-        
-        HAND_CONNECTIONS.forEach(([start, end]) => {
-          const startPoint = landmarks[start];
-          const endPoint = landmarks[end];
-          
-          ctx.beginPath();
-          ctx.moveTo(startPoint.x * canvasRef.current.width, startPoint.y * canvasRef.current.height);
-          ctx.lineTo(endPoint.x * canvasRef.current.width, endPoint.y * canvasRef.current.height);
-          ctx.stroke();
-        });
-
-        // Draw landmarks
-        ctx.fillStyle = gesture ? '#00ff00' : '#ffff00';
-        landmarks.forEach((landmark) => {
-          ctx.beginPath();
-          ctx.arc(
-            landmark.x * canvasRef.current.width,
-            landmark.y * canvasRef.current.height,
-            5,
-            0,
-            2 * Math.PI
-          );
-          ctx.fill();
-        });
-      });
-    }
-  };
 
   const detectFaces = React.useCallback(async () => {
     if (
@@ -169,11 +69,6 @@ const FaceDetectionWebcam = forwardRef((props, ref) => {
       // Clear canvas
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Process hand detection
-      if (handsRef.current && webcamRef.current && webcamRef.current.video) {
-        await handsRef.current.send({ image: webcamRef.current.video });
-      }
 
       if (detections.length > 0) {
         // Draw face boxes and landmarks
@@ -293,22 +188,6 @@ const FaceDetectionWebcam = forwardRef((props, ref) => {
         {faceCount === 0 && '⚠️ No face detected'}
         {faceCount === 1 && '✓ 1 face detected'}
         {faceCount > 1 && `⚠️ ${faceCount} faces detected - Only 1 allowed!`}
-      </div>
-      {/* Gesture detection badge */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '60px',
-          right: '10px',
-          background: gestureDetected ? 'rgba(0, 255, 0, 0.8)' : 'rgba(128, 128, 128, 0.8)',
-          color: 'white',
-          padding: '8px 16px',
-          borderRadius: '4px',
-          fontWeight: 'bold',
-          fontSize: '14px'
-        }}
-      >
-        {gestureDetected ? '👍 Thumbs Up Detected!' : '👍 Show Thumbs Up'}
       </div>
       {!modelsLoaded && (
         <div

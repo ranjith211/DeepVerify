@@ -21,8 +21,6 @@ function App() {
   const [videoBlob, setVideoBlob] = useState(null);
   const [faceCountDuringRecording, setFaceCountDuringRecording] = useState(null);
   const [currentFaceCount, setCurrentFaceCount] = useState(0); // Track current face count at all times
-  const [gestureDetected, setGestureDetected] = useState(false);
-  const [gestureDetectedDuringRecording, setGestureDetectedDuringRecording] = useState(false);
   const [challenge, setChallenge] = useState(null);
   const [language, setLanguage] = useState('english');
   const [verificationId, setVerificationId] = useState(null);
@@ -100,20 +98,12 @@ function App() {
     }
   };
 
-  const handleGestureDetected = (detected) => {
-    setGestureDetected(detected);
-    
-    // Track if gesture was detected during recording
-    if (recording && detected) {
-      setGestureDetectedDuringRecording(true);
-    }
-  };
+
 
   const startRecording = () => {
     setRecording(true);
     // Initialize with current face count instead of null
     setFaceCountDuringRecording(currentFaceCount);
-    setGestureDetectedDuringRecording(false); // Reset gesture detection
     chunksRef.current = [];
     
     const stream = webcamRef.current.stream;
@@ -164,12 +154,7 @@ function App() {
         return;
       }
 
-      // Validate thumbs up gesture was detected
-      if (!gestureDetectedDuringRecording) {
-        setError('Thumbs up gesture not detected. Please show a clear thumbs up gesture during recording and try again.');
-        setLoading(false);
-        return;
-      }
+
 
       // Create form data
       const formDataToSend = new FormData();
@@ -303,20 +288,16 @@ function App() {
           <p style={{ color: '#ff9800', fontWeight: 'bold' }}>
             ⚠️ Make sure only YOUR face is visible. Multiple faces will be highlighted in RED.
           </p>
-          <p style={{ color: '#2196f3', fontWeight: 'bold' }}>
-            👍 Show a THUMBS UP gesture during the recording for verification.
-          </p>
         </div>
       )}
       <div className="webcam-container">
         <FaceDetectionWebcam 
           ref={webcamRef} 
           onFaceCountChange={handleFaceCountChange}
-          onGestureDetected={handleGestureDetected}
         />
       </div>
       <div style={{ textAlign: 'center', marginTop: '20px' }}>
-        {/* Show face count and gesture status during recording */}
+        {/* Show face count status during recording */}
         {recording && (
           <>
             <div style={{ 
@@ -330,16 +311,6 @@ function App() {
               {currentFaceCount === 0 && '⚠️ No face detected - Please position yourself in frame'}
               {currentFaceCount === 1 && '✓ Perfect! One face detected - Recording...'}
               {currentFaceCount > 1 && `❌ ${currentFaceCount} faces detected - Only one person allowed!`}
-            </div>
-            <div style={{ 
-              padding: '10px', 
-              marginBottom: '10px', 
-              backgroundColor: gestureDetectedDuringRecording ? '#e8f5e9' : '#fff3e0',
-              borderRadius: '4px',
-              color: gestureDetectedDuringRecording ? '#2e7d32' : '#e65100',
-              fontWeight: 'bold'
-            }}>
-              {gestureDetectedDuringRecording ? '✓ Thumbs up detected!' : '👍 Show thumbs up gesture'}
             </div>
           </>
         )}
@@ -379,8 +350,7 @@ function App() {
           <div>
             <p style={{ color: '#4caf50', fontWeight: 'bold' }}>✓ Video recorded successfully!</p>
             <p style={{ fontSize: '14px', color: '#666' }}>
-              Face count: {faceCountDuringRecording !== null ? faceCountDuringRecording : currentFaceCount} | 
-              Gesture: {gestureDetectedDuringRecording ? '✓ Thumbs up detected' : '❌ Not detected'}
+              Face count: {faceCountDuringRecording !== null ? faceCountDuringRecording : currentFaceCount}
             </p>
           </div>
         )}
