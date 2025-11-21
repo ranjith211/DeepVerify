@@ -1,0 +1,593 @@
+/* Modern Design Enhancements for DeepVerify */
+
+/* Smooth Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(0, 123, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 24px rgba(0, 123, 255, 0.7);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Enhanced Cards - Apple-style Glossy */
+.verification-card,
+.kyc-status-card,
+.auth-box,
+.recommendations {
+  animation: fadeInUp 0.6s ease-out;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  background: linear-gradient(145deg, rgba(255,255,255,1) 0%, rgba(248,249,250,1) 100%) !important;
+  border: 1px solid rgba(255,255,255,0.8);
+  box-shadow: 
+    0 1px 3px rgba(0,0,0,0.04),
+    0 4px 16px rgba(0,0,0,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 -1px 0 rgba(0,0,0,0.02);
+}
+
+.verification-card:hover,
+.kyc-status-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 
+    0 2px 8px rgba(0,0,0,0.06),
+    0 12px 40px rgba(0,0,0,0.12),
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(0,0,0,0.03) !important;
+}
+
+/* Modern Button Effects - Apple Glossy Style */
+.btn-primary,
+.btn-secondary,
+.btn-logout,
+.btn-review {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 
+    0 1px 2px rgba(0,0,0,0.08),
+    0 2px 8px rgba(0,123,255,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    inset 0 -1px 1px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0,0,0,0.1) !important;
+}
+
+.btn-primary::before,
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%);
+  border-radius: 8px 8px 0 0;
+  pointer-events: none;
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-primary:hover::after {
+  width: 400px;
+  height: 400px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 
+    0 2px 4px rgba(0,0,0,0.1),
+    0 8px 24px rgba(0,123,255,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.3),
+    inset 0 -1px 1px rgba(0,0,0,0.1) !important;
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.1s;
+  box-shadow: 
+    0 1px 2px rgba(0,0,0,0.1),
+    inset 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Enhanced Steps - Apple Glossy */
+.step.active .step-number {
+  animation: pulse 2.5s ease-in-out infinite;
+  box-shadow: 
+    0 4px 16px rgba(0, 123, 255, 0.4),
+    0 2px 8px rgba(0,0,0,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.3),
+    inset 0 -1px 0 rgba(0,0,0,0.15) !important;
+}
+
+.step-number {
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 
+    0 2px 6px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.5),
+    inset 0 -1px 0 rgba(0,0,0,0.1) !important;
+}
+
+.step:hover .step-number {
+  transform: scale(1.08) translateY(-1px);
+  box-shadow: 
+    0 3px 10px rgba(0,0,0,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -1px 0 rgba(0,0,0,0.1) !important;
+}
+
+/* Modern Input Fields - Apple Style */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 
+    0 1px 3px rgba(0,0,0,0.04),
+    inset 0 1px 2px rgba(0,0,0,0.04);
+  background: rgba(255,255,255,0.95) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+}
+
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover {
+  border-color: rgba(0,123,255,0.3) !important;
+  box-shadow: 
+    0 2px 6px rgba(0,0,0,0.06),
+    inset 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  box-shadow: 
+    0 0 0 4px rgba(0, 123, 255, 0.15),
+    0 2px 8px rgba(0,123,255,0.1),
+    inset 0 1px 2px rgba(0,0,0,0.04) !important;
+  border-color: rgba(0,123,255,0.5) !important;
+  background: rgba(255,255,255,1) !important;
+}
+
+/* Gradient Backgrounds */
+.dashboard-header {
+  background: linear-gradient(135deg, #004C99 0%, #003d7a 100%) !important;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 4px 16px rgba(0,76,153,0.25),
+    0 2px 8px rgba(0,0,0,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    inset 0 -1px 0 rgba(0,0,0,0.1) !important;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.dashboard-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
+  pointer-events: none;
+}
+
+.dashboard-header::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  animation: float 10s ease-in-out infinite;
+}
+
+.auth-container {
+  background: linear-gradient(135deg, #F4F6F9 0%, #E9ECEF 100%) !important;
+  position: relative;
+}
+
+.auth-container::before {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(0, 123, 255, 0.12) 0%, rgba(0, 123, 255, 0.03) 50%, transparent 70%);
+  top: 10%;
+  left: 10%;
+  animation: float 8s ease-in-out infinite;
+  border-radius: 50%;
+  filter: blur(60px);
+}
+
+.auth-container::after {
+  content: '';
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(0, 76, 153, 0.1) 0%, rgba(0, 76, 153, 0.02) 50%, transparent 70%);
+  bottom: 15%;
+  right: 15%;
+  animation: float 10s ease-in-out infinite reverse;
+  border-radius: 50%;
+  filter: blur(60px);
+}
+
+/* Enhanced Badges - Apple Glossy Style */
+.badge,
+.status-badge {
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  cursor: default;
+  box-shadow: 
+    0 1px 3px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.3),
+    inset 0 -1px 0 rgba(0,0,0,0.1);
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+.badge:hover,
+.status-badge:hover {
+  transform: scale(1.05) translateY(-1px);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+/* Smooth Scrollbar - Apple Style */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.03);
+  border-radius: 10px;
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0,123,255,0.8) 0%, rgba(0,86,179,0.9) 100%);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 
+    0 2px 6px rgba(0,0,0,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.3),
+    inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(0,86,179,0.9) 0%, rgba(0,64,133,1) 100%);
+  box-shadow: 
+    0 2px 8px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.3),
+    inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+/* Loading States */
+.spinner {
+  box-shadow: 0 0 25px rgba(0, 123, 255, 0.4);
+  animation: spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite !important;
+}
+
+/* Result Boxes with Apple Glossy Style */
+.result-box.success {
+  box-shadow: 
+    0 4px 16px rgba(40, 167, 69, 0.2),
+    0 2px 8px rgba(0,0,0,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.5),
+    inset 0 -1px 0 rgba(40, 167, 69, 0.2);
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.result-box.success:hover {
+  box-shadow: 
+    0 8px 24px rgba(40, 167, 69, 0.3),
+    0 2px 8px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -1px 0 rgba(40, 167, 69, 0.25);
+  transform: translateY(-3px);
+}
+
+.result-box.warning {
+  box-shadow: 
+    0 4px 16px rgba(255, 193, 7, 0.2),
+    0 2px 8px rgba(0,0,0,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.5),
+    inset 0 -1px 0 rgba(255, 193, 7, 0.2);
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.result-box.warning:hover {
+  box-shadow: 
+    0 8px 24px rgba(255, 193, 7, 0.3),
+    0 2px 8px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -1px 0 rgba(255, 193, 7, 0.25);
+  transform: translateY(-3px);
+}
+
+.result-box.error {
+  box-shadow: 
+    0 4px 16px rgba(220, 53, 69, 0.2),
+    0 2px 8px rgba(0,0,0,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.5),
+    inset 0 -1px 0 rgba(220, 53, 69, 0.2);
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.result-box.error:hover {
+  box-shadow: 
+    0 8px 24px rgba(220, 53, 69, 0.3),
+    0 2px 8px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -1px 0 rgba(220, 53, 69, 0.25);
+  transform: translateY(-3px);
+}
+
+/* Enhanced Modal - Apple Style */
+.modal-overlay {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(0,0,0,0.4) !important;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Glassmorphism Effect for Cards - Apple Style */
+.auth-box,
+.verification-card {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 
+    0 8px 32px rgba(0,0,0,0.08),
+    0 2px 8px rgba(0,0,0,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 -1px 0 rgba(0,0,0,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.6) !important;
+}
+
+/* File Upload Area Enhancement - Apple Style */
+.file-input-label {
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 
+    0 2px 8px rgba(0,0,0,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.5),
+    inset 0 -1px 0 rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.1) !important;
+}
+
+.file-input-label:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 16px rgba(0, 123, 255, 0.25),
+    0 2px 8px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -1px 0 rgba(0,123,255,0.1) !important;
+  border-color: rgba(0, 123, 255, 0.4) !important;
+}
+
+/* Challenge Box Modern Look */
+.challenge-box {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.challenge-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.15);
+}
+
+/* Tab Buttons Modern Styling */
+.auth-tabs button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.auth-tabs button::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--secondary-blue, #007BFF);
+  transform: scaleX(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 3px 3px 0 0;
+}
+
+.auth-tabs button.active::after {
+  transform: scaleX(1);
+}
+
+.auth-tabs button:hover {
+  background: rgba(0, 123, 255, 0.05);
+}
+
+/* Detail Items Enhanced */
+.detail-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.detail-item:hover {
+  background: rgba(0, 123, 255, 0.03);
+  transform: translateX(5px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Status Cards Glow Effect */
+.status-badge-large.approved {
+  box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
+}
+
+.status-badge-large.rejected {
+  box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
+}
+
+.status-badge-large.pending {
+  box-shadow: 0 0 20px rgba(255, 193, 7, 0.3);
+  animation: pulse 3s ease-in-out infinite;
+}
+
+/* Recommendation Section */
+.recommendation-section {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recommendation-section:hover {
+  transform: translateX(3px);
+  box-shadow: -4px 0 12px rgba(0, 123, 255, 0.15);
+}
+
+/* Logout Button Enhancement */
+.btn-logout-small,
+.btn-logout {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-logout-small:hover,
+.btn-logout:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.3) !important;
+}
+
+/* Smooth Transitions for All Elements */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Responsive Enhancements */
+@media (max-width: 768px) {
+  .verification-card:hover,
+  .kyc-status-card:hover {
+    transform: none;
+  }
+  
+  .auth-container::before,
+  .auth-container::after {
+    display: none;
+  }
+}
+
+/* Add subtle page load animation */
+body {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Apple-style glossy surface for all major containers */
+.submission-card,
+.stat-card,
+.modal-content,
+.challenge-box {
+  box-shadow: 
+    0 2px 8px rgba(0,0,0,0.06),
+    0 1px 3px rgba(0,0,0,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.5),
+    inset 0 -1px 0 rgba(0,0,0,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.6);
+  background: linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(248,249,250,0.95) 100%) !important;
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+}
+
+/* Glossy text on headers */
+.dashboard-header h1,
+.auth-box h1,
+.verification-card h2 {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  letter-spacing: -0.5px;
+}
+
+/* Refined shadows for depth */
+.detail-item {
+  box-shadow: 
+    0 1px 3px rgba(0,0,0,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.5) !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+}
+
+/* Status cards with glossy finish */
+.status-badge-large {
+  box-shadow: 
+    0 3px 12px rgba(0,0,0,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    inset 0 -1px 0 rgba(0,0,0,0.1) !important;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* Enhanced focus visible for accessibility */
+*:focus-visible {
+  outline: 3px solid rgba(0, 123, 255, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
