@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Webcam from 'react-webcam';
 import './App.css';
+import './Modern.css';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -764,20 +765,20 @@ function App() {
           <button onClick={handleLogout} className="btn-logout-small">Logout</button>
         </header>
 
-        <div className="step-indicator">
-          <div className={`step ${step >= 1 ? 'active completed' : ''}`}>
+        <div className={`step-indicator step-${step}`}>
+          <div className={`step ${step === 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
             <div className="step-number">1</div>
             <div className="step-label">Information</div>
           </div>
-          <div className={`step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
+          <div className={`step ${step === 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
             <div className="step-number">2</div>
             <div className="step-label">Language</div>
           </div>
-          <div className={`step ${step >= 3 ? 'active' : ''} ${step > 3 ? 'completed' : ''}`}>
+          <div className={`step ${step === 3 ? 'active' : ''} ${step > 3 ? 'completed' : ''}`}>
             <div className="step-number">3</div>
             <div className="step-label">Liveness</div>
           </div>
-          <div className={`step ${step >= 4 ? 'active completed' : ''}`}>
+          <div className={`step ${step === 4 ? 'active' : ''} ${step > 4 ? 'completed' : ''}`}>
             <div className="step-number">4</div>
             <div className="step-label">Result</div>
           </div>
