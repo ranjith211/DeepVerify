@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Admin.css';
+import './Modern.css';
 
 function Admin() {
   const [authenticated, setAuthenticated] = useState(localStorage.getItem('adminAuthenticated') === 'true');
