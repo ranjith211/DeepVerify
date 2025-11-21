@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './Admin.css';
+import { 
+  BarChart, Bar, PieChart, Pie, Cell, 
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  RadialBarChart, RadialBar, Area, AreaChart
+} from 'recharts';
 
 function Admin() {
   const [authenticated, setAuthenticated] = useState(localStorage.getItem('adminAuthenticated') === 'true');
@@ -10,12 +15,15 @@ function Admin() {
   const [loading, setLoading] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [adminNotes, setAdminNotes] = useState('');
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
+  const [currentPage, setCurrentPage] = useState('overview'); // 'overview' or 'approvals'
 
   // Load submissions on mount if already authenticated
   useEffect(() => {
     if (authenticated) {
       fetchSubmissions();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogin = (e) => {
@@ -122,6 +130,82 @@ function Admin() {
     return '#6c757d';
   };
 
+  // Chart data calculations
+  const getStatusChartData = () => {
+    const approved = submissions.filter(s => s.admin_status === 'approved').length;
+    const rejected = submissions.filter(s => s.admin_status === 'rejected').length;
+    const pending = submissions.filter(s => !s.admin_status || s.admin_status === 'pending_review').length;
+    
+    return [
+      { name: 'Approved', value: approved, color: '#10b981' },
+      { name: 'Pending', value: pending, color: '#f59e0b' },
+      { name: 'Rejected', value: rejected, color: '#ef4444' }
+    ];
+  };
+
+  const getRiskLevelChartData = () => {
+    const low = submissions.filter(s => s.risk_level === 'low').length;
+    const medium = submissions.filter(s => s.risk_level === 'medium').length;
+    const high = submissions.filter(s => s.risk_level === 'high').length;
+    
+    return [
+      { name: 'Low Risk', value: low, fill: '#10b981' },
+      { name: 'Medium Risk', value: medium, fill: '#f59e0b' },
+      { name: 'High Risk', value: high, fill: '#ef4444' }
+    ];
+  };
+
+  const getVerificationStepData = () => {
+    return [
+      { 
+        name: 'Document', 
+        passed: submissions.filter(s => s.document_status === 'passed').length,
+        failed: submissions.filter(s => s.document_status === 'failed').length
+      },
+      { 
+        name: 'Liveness', 
+        passed: submissions.filter(s => s.liveness_status === 'passed').length,
+        failed: submissions.filter(s => s.liveness_status === 'failed').length
+      },
+      { 
+        name: 'Compliance', 
+        passed: submissions.filter(s => s.compliance_status === 'passed').length,
+        failed: submissions.filter(s => s.compliance_status === 'failed').length
+      }
+    ];
+  };
+
+  const getTimelineData = () => {
+    const last7Days = [];
+    const now = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const daySubmissions = submissions.filter(s => {
+        const subDate = new Date(s.created_at).toISOString().split('T')[0];
+        return subDate === dateStr;
+      });
+      
+      last7Days.push({
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        submissions: daySubmissions.length,
+        approved: daySubmissions.filter(s => s.admin_status === 'approved').length,
+        rejected: daySubmissions.filter(s => s.admin_status === 'rejected').length
+      });
+    }
+    
+    return last7Days;
+  };
+
+  const getAverageRiskScore = () => {
+    if (submissions.length === 0) return 0;
+    const total = submissions.reduce((sum, s) => sum + (s.risk_score || 0), 0);
+    return ((total / submissions.length) * 100).toFixed(1);
+  };
+
   if (!authenticated) {
     return (
       <div className="admin-login-container">
@@ -159,35 +243,211 @@ function Admin() {
   return (
     <div className="admin-dashboard">
       <header className="admin-header">
-        <h1>📊 KYC Admin Dashboard</h1>
-        <button onClick={handleLogout} className="btn-logout">
-          Logout
-        </button>
+        <div className="header-left">
+          <h1>📊 KYC Admin Dashboard</h1>
+          <p className="header-subtitle">Deep-Verify Identity Verification System</p>
+        </div>
+        <div className="header-right">
+          <button onClick={handleLogout} className="btn-logout">
+            <span>🚪</span> Logout
+          </button>
+        </div>
       </header>
 
-      <div className="admin-content">
-        <div className="dashboard-stats">
-          <div className="stat-card">
-            <h3>Total Submissions</h3>
-            <div className="stat-number">{submissions.length}</div>
-          </div>
-          <div className="stat-card">
-            <h3>Pending Review</h3>
-            <div className="stat-number">
+      {/* Navigation Tabs */}
+      <div className="admin-navigation">
+        <button 
+          className={currentPage === 'overview' ? 'nav-tab active' : 'nav-tab'}
+          onClick={() => setCurrentPage('overview')}
+        >
+          <span>📊</span> Overview & Analytics
+        </button>
+        <button 
+          className={currentPage === 'approvals' ? 'nav-tab active' : 'nav-tab'}
+          onClick={() => setCurrentPage('approvals')}
+        >
+          <span>✅</span> Pending Approvals
+          {submissions.filter(s => !s.admin_status || s.admin_status === 'pending_review').length > 0 && (
+            <span className="badge">
               {submissions.filter(s => !s.admin_status || s.admin_status === 'pending_review').length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div className="admin-content">
+        {currentPage === 'overview' ? (
+          // OVERVIEW PAGE
+          <>
+            {/* Enhanced Stats Cards */}
+            <div className="dashboard-stats">
+              <div className="stat-card gradient-blue">
+                <div className="stat-icon">📊</div>
+                <div className="stat-content">
+                  <h3>Total Submissions</h3>
+                  <div className="stat-number">{submissions.length}</div>
+                  <div className="stat-trend">+12% from last week</div>
+                </div>
+              </div>
+              <div className="stat-card gradient-orange">
+                <div className="stat-icon">⏳</div>
+                <div className="stat-content">
+                  <h3>Pending Review</h3>
+                  <div className="stat-number">
+                    {submissions.filter(s => !s.admin_status || s.admin_status === 'pending_review').length}
+                  </div>
+                  <div className="stat-trend">Awaiting decision</div>
+                </div>
+              </div>
+              <div className="stat-card gradient-green">
+                <div className="stat-icon">✓</div>
+                <div className="stat-content">
+                  <h3>Approved</h3>
+                  <div className="stat-number">
+                    {submissions.filter(s => s.admin_status === 'approved').length}
+                  </div>
+                  <div className="stat-trend">
+                    {submissions.length > 0 ? 
+                      ((submissions.filter(s => s.admin_status === 'approved').length / submissions.length) * 100).toFixed(0) 
+                      : 0}% success rate
+                  </div>
+                </div>
+              </div>
+              <div className="stat-card gradient-red">
+                <div className="stat-icon">✗</div>
+                <div className="stat-content">
+                  <h3>Rejected</h3>
+                  <div className="stat-number">
+                    {submissions.filter(s => s.admin_status === 'rejected').length}
+                  </div>
+                  <div className="stat-trend">Requires attention</div>
+                </div>
+              </div>
+              <div className="stat-card gradient-purple">
+                <div className="stat-icon">⚡</div>
+                <div className="stat-content">
+                  <h3>Avg Risk Score</h3>
+                  <div className="stat-number">{getAverageRiskScore()}%</div>
+                  <div className="stat-trend">Risk assessment</div>
+                </div>
+              </div>
             </div>
+
+            {/* Charts Section */}
+            <div className="charts-section">
+              <div className="chart-card">
+                <h3>📈 Submission Timeline (Last 7 Days)</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={getTimelineData()}>
+                    <defs>
+                      <linearGradient id="colorSubmissions" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#667eea" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#667eea" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="date" stroke="#666" />
+                    <YAxis stroke="#666" />
+                    <Tooltip 
+                      contentStyle={{ background: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="submissions" 
+                      stroke="#667eea" 
+                      fillOpacity={1} 
+                      fill="url(#colorSubmissions)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+          <div className="chart-card">
+            <h3>🎯 Verification Status Distribution</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={getStatusChartData()}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {getStatusChartData().map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-          <div className="stat-card">
-            <h3>Approved</h3>
-            <div className="stat-number" style={{ color: '#28a745' }}>
-              {submissions.filter(s => s.admin_status === 'approved').length}
-            </div>
+
+          <div className="chart-card">
+            <h3>📊 Verification Steps Performance</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={getVerificationStepData()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="name" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip 
+                  contentStyle={{ background: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}
+                />
+                <Legend />
+                <Bar dataKey="passed" fill="#10b981" name="Passed" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="failed" fill="#ef4444" name="Failed" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <div className="stat-card">
-            <h3>Rejected</h3>
-            <div className="stat-number" style={{ color: '#dc3545' }}>
-              {submissions.filter(s => s.admin_status === 'rejected').length}
-            </div>
+
+          <div className="chart-card">
+            <h3>🎨 Risk Level Distribution</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <RadialBarChart 
+                cx="50%" 
+                cy="50%" 
+                innerRadius="20%" 
+                outerRadius="100%" 
+                data={getRiskLevelChartData()}
+                startAngle={180}
+                endAngle={0}
+              >
+                <RadialBar
+                  minAngle={15}
+                  label={{ position: 'insideStart', fill: '#fff', fontWeight: 'bold' }}
+                  background
+                  dataKey="value"
+                />
+                <Legend 
+                  iconSize={10}
+                  layout="vertical"
+                  verticalAlign="middle"
+                  align="right"
+                />
+                <Tooltip />
+              </RadialBarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* All Submissions Table/List */}
+        <div className="section-header">
+          <h2>📋 All Submissions History</h2>
+          <div className="view-toggle">
+            <button 
+              className={viewMode === 'cards' ? 'active' : ''}
+              onClick={() => setViewMode('cards')}
+            >
+              <span>⊞</span> Cards
+            </button>
+            <button 
+              className={viewMode === 'table' ? 'active' : ''}
+              onClick={() => setViewMode('table')}
+            >
+              <span>☰</span> Table
+            </button>
           </div>
         </div>
 
@@ -255,19 +515,110 @@ function Admin() {
                   </div>
                 )}
 
-                {(!submission.admin_status || submission.admin_status === 'pending_review') && (
-                  <div className="action-buttons">
-                    <button 
-                      onClick={() => setSelectedSubmission(submission)}
-                      className="btn-review"
-                    >
-                      Review
-                    </button>
-                  </div>
-                )}
+                <div className="action-buttons">
+                  <button 
+                    onClick={() => setSelectedSubmission(submission)}
+                    className="btn-review"
+                  >
+                    View Details
+                  </button>
+                </div>
               </div>
             ))}
           </div>
+        )}
+      </>
+        ) : (
+          // APPROVALS PAGE
+          <>
+            <div className="page-header">
+              <h2>⏳ Pending KYC Approvals</h2>
+              <p className="page-description">Review and approve or reject pending KYC submissions</p>
+            </div>
+
+            {loading ? (
+              <div className="loading">Loading pending submissions...</div>
+            ) : (
+              <>
+                {submissions.filter(s => !s.admin_status || s.admin_status === 'pending_review').length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">✅</div>
+                    <h3>All Caught Up!</h3>
+                    <p>There are no pending approvals at the moment.</p>
+                  </div>
+                ) : (
+                  <div className="submissions-grid">
+                    {submissions
+                      .filter(s => !s.admin_status || s.admin_status === 'pending_review')
+                      .map((submission) => (
+                        <div key={submission.verification_id} className="submission-card pending">
+                          <div className="submission-header">
+                            <h3>{submission.full_name}</h3>
+                            <span 
+                              className="status-badge"
+                              style={{ backgroundColor: getStatusColor(submission.admin_status || 'pending') }}
+                            >
+                              {submission.admin_status || 'Pending Review'}
+                            </span>
+                          </div>
+
+                          <div className="submission-details">
+                            <p><strong>Email:</strong> {submission.email}</p>
+                            <p><strong>Phone:</strong> {submission.phone}</p>
+                            <p><strong>DOB:</strong> {submission.dob}</p>
+                            <p><strong>Risk Level:</strong> 
+                              <span style={{ 
+                                color: getRiskColor(submission.risk_level),
+                                fontWeight: 'bold',
+                                marginLeft: '5px'
+                              }}>
+                                {submission.risk_level?.toUpperCase()}
+                              </span>
+                            </p>
+                            <p><strong>Risk Score:</strong> {(submission.risk_score * 100).toFixed(1)}%</p>
+                          </div>
+
+                          <div className="verification-checks">
+                            <div className="check-item">
+                              <span>Document:</span>
+                              <span style={{ color: getStatusColor(submission.document_status) }}>
+                                {submission.document_status}
+                              </span>
+                            </div>
+                            <div className="check-item">
+                              <span>Liveness:</span>
+                              <span style={{ color: getStatusColor(submission.liveness_status) }}>
+                                {submission.liveness_status}
+                              </span>
+                            </div>
+                            <div className="check-item">
+                              <span>Compliance:</span>
+                              <span style={{ color: getStatusColor(submission.compliance_status) }}>
+                                {submission.compliance_status}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="submission-meta">
+                            <small>Created: {new Date(submission.created_at).toLocaleString()}</small>
+                            <small>ID: {submission.verification_id.substring(0, 8)}...</small>
+                          </div>
+
+                          <div className="action-buttons">
+                            <button 
+                              onClick={() => setSelectedSubmission(submission)}
+                              className="btn-review"
+                            >
+                              📋 Review & Decide
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
 
         {selectedSubmission && (
