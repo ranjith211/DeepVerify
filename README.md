@@ -305,12 +305,12 @@ For production deployment:
 
 1. **Change Database to PostgreSQL:**
    ```bash
-   DATABASE_URL=postgresql://user:password@host:5432/deepverify
+   DATABASE_URL=postgresql://username:your-password@host:5432/deepverify
    ```
 
 2. **Set up MongoDB:**
    ```bash
-   MONGODB_URL=mongodb+srv://user:pass@cluster.mongodb.net/
+   MONGODB_URL=mongodb+srv://username:your-password@cluster.mongodb.net/
    ```
 
 3. **Configure Redis:**
