@@ -664,30 +664,6 @@ This is a hackathon submission project. For contributions:
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Open Pull Request
 
-## 📄 License
-
-Proprietary - GHCI 25 Hackathon Submission
-
-## 👥 Team
-
-**Project:** DeepVerify  
-**Event:** GHCI 25 Hackathon Round 2  
-**Repository:** [github.com/ranjith211/DeepVerify](https://github.com/ranjith211/DeepVerify)
-
-## 📞 Support
-
-For issues and questions:
-- Create an issue on GitHub
-- Contact: [Project maintainers]
-
-## 🙏 Acknowledgments
-
-- OpenAI Whisper for speech recognition
-- Google MediaPipe for computer vision
-- FastAPI framework
-- React community
-- GHCI 25 organizers
-
 ---
 
 **Made with ❤️ for GHCI 25 Hackathon**
