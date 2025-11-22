@@ -862,6 +862,11 @@ function App() {
                 <option value="english">English</option>
                 <option value="hindi">Hindi (हिंदी)</option>
                 <option value="tamil">Tamil (தமிழ்)</option>
+                <option value="marathi">Marathi (मराठी)</option>
+                <option value="telugu">Telugu (తెలుగు)</option>
+                <option value="kannada">Kannada (ಕನ್ನಡ)</option>
+                <option value="malayalam">Malayalam (മലയാളം)</option>
+                <option value="bengali">Bengali (বাংলা)</option>
               </select>
             </div>
             <div className="challenge-box">
