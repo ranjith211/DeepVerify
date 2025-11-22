@@ -5,7 +5,7 @@ A unified, multi-modal GenAI system for modern KYC verification that defeats sop
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-green)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18.2.0-61dafb)](https://reactjs.org/)
-[![License](https://img.shields.io/badge/License-Proprietary-red)](LICENSE)
+[![License](https://img.shields.io/badge/License-Proprietary-red)](LICENSE)Hindi
 
 ## 📋 Table of Contents
 
@@ -533,14 +533,14 @@ Multi-modal liveness verification includes:
 ### Multi-Language Support
 
 Supported languages with native script:
-- 🇬🇧 English
-- 🇮🇳 Hindi (हिंदी)
-- 🇮🇳 Tamil (தமிழ்)
-- 🇮🇳 Marathi (मराठी)
-- 🇮🇳 Telugu (తెలుగు)
-- 🇮🇳 Kannada (ಕನ್ನಡ)
-- 🇮🇳 Malayalam (മലയാളം)
-- 🇮🇳 Bengali (বাংলা)
+- English
+- Hindi (हिंदी)
+- Tamil (தமிழ்)
+- Marathi (मराठी)
+- Telugu (తెలుగు)
+- Kannada (ಕನ್ನಡ)
+- Malayalam (മലയാളം)
+- Bengali (বাংলা)
 
 ### Admin Dashboard
 
