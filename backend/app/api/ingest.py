@@ -133,7 +133,10 @@ async def ingest_verification(
 async def get_liveness_challenge(language: str = "english"):
     """
     Get a random liveness challenge in specified language
-    Supports: english, hindi, tamil
+    Supports: english, hindi, tamil, marathi, telugu, kannada, malayalam, bengali
+    
+    Args:
+        language: Language code for the challenge
     """
     try:
         challenge = LivenessService.generate_challenge(language)
