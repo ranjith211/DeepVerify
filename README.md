@@ -1,6 +1,6 @@
 # 🔐 DeepVerify - AI-Powered KYC Verification System
 
-A unified, multi-modal GenAI system for modern KYC verification that defeats sophisticated, AI-driven fraud with a secure, seamless 60-second verification process.
+DeepVerify is a multi-modal KYC verification system that detects sophisticated document forgeries and defeats deepfake attacks. Built for India's linguistic diversity, it delivers secure verification in under 60 seconds across 8 Indian languages.
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-green)](https://fastapi.tiangolo.com/)
@@ -663,6 +663,11 @@ This is a hackathon submission project. For contributions:
 3. Commit changes (`git commit -m 'Add AmazingFeature'`)
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Open Pull Request
+
+---
+
+## ▶️ Demo Video 
+🔗 https://youtu.be/xcERolPJIX8
 
 ---
 
