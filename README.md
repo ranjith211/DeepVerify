@@ -19,7 +19,7 @@ DeepVerify is a multi-modal KYC verification system that detects sophisticated d
 - [Features in Detail](#features-in-detail)
 - [Security & Compliance](#security--compliance)
 - [Contributing](#contributing)
-- [Demo Video]([#demo-video](https://github.com/ranjith211/DeepVerify))
+- [Demo Video](https://github.com/ranjith211/DeepVerify)
 
 ## 🎯 Overview
 
