@@ -2,10 +2,14 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.database_models import User, VerificationLog
-from app.services.document_service import DocumentService
-from app.services.liveness_service import LivenessService
+from app.services.document_service import get_ai_document_service
+from app.services.liveness_service import get_ai_liveness_service
 from app.services.compliance_service import ComplianceService
 from app.services.xai_service import XAIService
+
+# Get AI service instances
+DocumentService = get_ai_document_service()
+LivenessService = get_ai_liveness_service()
 from app.utils.encryption import encryption_service
 from app.mongodb import get_ai_logs, get_audit_logs
 import os
@@ -41,19 +45,49 @@ async def verify(
         # Decrypt user data
         full_name = encryption_service.decrypt(user.full_name_encrypted)
         dob = encryption_service.decrypt(user.dob_encrypted)
+        print(f"\n{'='*60}\nVERIFICATION REQUEST: User entered Name='{full_name}', DOB='{dob}'\n{'='*60}")
         
-        # File paths
-        doc_path = os.path.join(UPLOAD_DIR, f"{verification_id}_document.jpg")
-        video_path = os.path.join(UPLOAD_DIR, f"{verification_id}_video.mp4")
+        # File paths - try multiple extensions
+        doc_path = None
+        video_path = None
         
-        # 1. Document Analysis
-        doc_valid, doc_confidence, doc_analysis = DocumentService.analyze_document(doc_path)
+        # Find document file
+        for ext in ['.jpg', '.jpeg', '.png']:
+            path = os.path.join(UPLOAD_DIR, f"{verification_id}_document{ext}")
+            if os.path.exists(path):
+                doc_path = path
+                break
+        
+        # Find video file
+        for ext in ['.webm', '.mp4', '.mov']:
+            path = os.path.join(UPLOAD_DIR, f"{verification_id}_video{ext}")
+            if os.path.exists(path):
+                video_path = path
+                break
+        
+        if not doc_path or not os.path.exists(doc_path):
+            raise HTTPException(status_code=404, detail="Document file not found")
+        
+        if not video_path or not os.path.exists(video_path):
+            raise HTTPException(status_code=404, detail="Video file not found")
+        
+        # 1. Document Analysis with name/DOB verification
+        doc_valid, doc_confidence, doc_analysis = DocumentService.analyze_document(
+            doc_path, 
+            expected_name=full_name,
+            expected_dob=dob
+        )
         verification.document_status = "passed" if doc_valid else "failed"
         
-        # 2. Liveness Check (mock challenge for now)
-        mock_challenge = {"expected_phrase": "blue cat", "expected_gesture": "hold up three fingers"}
+        # 2. Liveness Check using stored challenge
+        import json
+        if not verification.liveness_challenge:
+            raise HTTPException(status_code=400, detail="Liveness challenge not found")
+        
+        challenge = json.loads(verification.liveness_challenge)
+        print(f"Using stored challenge: {challenge}")
         liveness_valid, liveness_confidence, liveness_analysis = LivenessService.validate_liveness(
-            video_path, mock_challenge
+            video_path, challenge
         )
         verification.liveness_status = "passed" if liveness_valid else "failed"
         
@@ -72,17 +106,26 @@ async def verify(
         
         verification.risk_score = overall_risk
         
-        # Determine risk level
+        # Determine risk level and admin status
         if overall_risk < 0.3:
             verification.risk_level = "low"
             verification.status = "approved"
+            # Low risk but still needs admin review
+            if not verification.admin_status or verification.admin_status == "pending_review":
+                verification.admin_status = "pending_review"
         elif overall_risk < 0.6:
             verification.risk_level = "medium"
             verification.status = "review_required"
             verification.requires_human_review = True
+            # Medium risk requires admin review
+            if not verification.admin_status or verification.admin_status == "pending_review":
+                verification.admin_status = "pending_review"
         else:
             verification.risk_level = "high"
             verification.status = "rejected"
+            # High risk requires admin review
+            if not verification.admin_status or verification.admin_status == "pending_review":
+                verification.admin_status = "pending_review"
         
         # 5. Generate Explanation
         explanation = XAIService.generate_explanation(
@@ -93,6 +136,22 @@ async def verify(
         )
         verification.explanation = explanation
         verification.completed_at = datetime.utcnow()
+        
+        # Store detailed analysis as JSON strings
+        import json
+        verification.document_analysis = json.dumps(doc_analysis)
+        verification.liveness_analysis = json.dumps(liveness_analysis)
+        verification.compliance_analysis = json.dumps(compliance_result)
+        
+        # Update user KYC status based on verification result
+        # Keep as pending until admin reviews (except for very low risk auto-approve)
+        if verification.status == "approved" and overall_risk < 0.2:
+            user.kyc_status = "approved"
+        elif verification.status == "rejected" and overall_risk > 0.8:
+            user.kyc_status = "rejected"
+        else:
+            # All other cases need admin review
+            user.kyc_status = "pending"
         
         # Save to database
         db.commit()
