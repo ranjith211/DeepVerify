@@ -1,5 +1,5 @@
 """
-Migration script to add detailed analysis columns to verification_logs table
+Migration script to add detailed analysis columns to verificat
 """
 import sqlite3
 from pathlib import Path
