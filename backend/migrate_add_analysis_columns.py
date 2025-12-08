@@ -1,5 +1,5 @@
 """
-Migration script to add detailed analysis columns to verificat
+Migration script to add detailed analysis columns to verification
 """
 import sqlite3
 from pathlib import Path
