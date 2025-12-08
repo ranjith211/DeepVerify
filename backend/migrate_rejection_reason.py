@@ -1,5 +1,5 @@
 """
-Migration script to add rejection_reason column to verification_logs table
+Migration script to add rejection_reason column to verification_logs
 """
 import sqlite3
 from pathlib import Path
